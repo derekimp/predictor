@@ -1,0 +1,24 @@
+[general]
+environment = "demo"  # "demo" or "production"
+log_level = "INFO"
+log_format = "json"   # "json" or "console"
+
+[api]
+rest_base_url_demo = "https://demo-api.kalshi.co/trade-api/v2"
+rest_base_url_prod = "https://api.elections.kalshi.com/trade-api/v2"
+ws_url_demo = "wss://demo-api.kalshi.co/trade-api/ws/v2"
+ws_url_prod = "wss://api.elections.kalshi.com/trade-api/ws/v2"
+# API key and private key path come from environment variables:
+# KALSHI_API_KEY_ID, KALSHI_PRIVATE_KEY_PATH
+
+[rate_limits]
+requests_per_second = 8.0
+burst = 15
+
+[storage]
+db_path = "data/predictor.db"
+
+[monitoring]
+health_port = 8080
+metrics_interval_seconds = 60
+pnl_snapshot_interval_seconds = 300

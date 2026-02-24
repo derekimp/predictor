@@ -1,0 +1,24 @@
+[strategies.stat_arb]
+enabled = true
+arb_threshold_cents = 5              # minimum mispricing to trade
+max_position_per_leg = 50            # contracts
+target_events = []                   # empty = monitor all events
+
+[strategies.sentiment]
+enabled = false                      # Phase 6
+rss_feeds = [
+    "https://feeds.reuters.com/reuters/businessNews",
+    "https://feeds.reuters.com/reuters/politicsNews",
+]
+poll_interval_seconds = 300
+min_divergence_cents = 10
+sentiment_window_articles = 20
+decay_factor = 0.95
+
+[strategies.market_maker]
+enabled = false                      # Phase 6
+half_spread_cents = 3
+max_position = 100
+skew_factor = 0.5
+requote_threshold_cents = 2
+target_tickers = []                  # populated at runtime based on liquidity

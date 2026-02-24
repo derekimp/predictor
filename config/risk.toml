@@ -1,0 +1,8 @@
+[limits]
+max_position_per_market = 100        # contracts
+max_total_exposure_cents = 50000     # $500
+max_daily_loss_cents = 5000          # $50
+max_drawdown_pct = 0.10              # 10%
+max_concentration_pct = 0.25         # 25% of portfolio in one event
+max_order_size = 50                  # contracts per order
+min_balance_cents = 10000            # $100 minimum balance to trade

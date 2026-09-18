@@ -6,7 +6,7 @@ from datetime import datetime
 
 import pytest
 
-from predictor.core.models import Fill, Market, Order, Signal, TradeMessage
+from predictor.core.models import Market, Order, Signal, TradeMessage
 from predictor.data.storage import Storage
 
 
@@ -69,7 +69,9 @@ class TestStorage:
         await storage.save_trade(trade)
 
         conn = await storage._ensure_conn()
-        cursor = await conn.execute("SELECT count, yes_price FROM trades WHERE ticker='TEST-TICKER'")
+        cursor = await conn.execute(
+            "SELECT count, yes_price FROM trades WHERE ticker='TEST-TICKER'"
+        )
         row = await cursor.fetchone()
         assert row[0] == 10
         assert row[1] == 50

@@ -17,14 +17,12 @@ from predictor.core.models import (
     CreateOrderRequest,
     Event,
     EventsResponse,
-    Fill,
     FillsResponse,
     Market,
     MarketsResponse,
     Order,
     Orderbook,
     Position,
-    Settlement,
     SettlementsResponse,
     TradesResponse,
 )
@@ -120,7 +118,7 @@ class KalshiRestClient:
 
                     return body if isinstance(body, dict) else {}
 
-            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            except (TimeoutError, aiohttp.ClientError) as e:
                 last_error = e
                 wait = _RETRY_BACKOFF_BASE * (2**attempt)
                 logger.warning(
@@ -175,7 +173,10 @@ class KalshiRestClient:
         end_ts: int | None = None,
     ) -> list[Candlestick]:
         """Fetch candlestick (OHLCV) data for a market."""
-        data = await self._request("GET", f"/series/{series_ticker}/markets/{ticker}/candlesticks", params={
+        data = await self._request(
+            "GET",
+            f"/series/{series_ticker}/markets/{ticker}/candlesticks",
+            params={
             "period_interval": period_interval,
             "start_ts": start_ts,
             "end_ts": end_ts,
@@ -224,7 +225,9 @@ class KalshiRestClient:
 
     async def create_order(self, order: CreateOrderRequest) -> Order:
         """Place a new order."""
-        data = await self._request("POST", "/portfolio/orders", json_body=order.model_dump(exclude_none=True))
+        data = await self._request(
+            "POST", "/portfolio/orders", json_body=order.model_dump(exclude_none=True)
+        )
         return Order.model_validate(data.get("order", data))
 
     async def cancel_order(self, order_id: str) -> None:

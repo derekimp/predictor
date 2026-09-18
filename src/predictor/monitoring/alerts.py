@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Any
 
-from predictor.core.event_bus import EventBus, RISK_BREACH
+from predictor.core.event_bus import RISK_BREACH, EventBus
 from predictor.risk.portfolio import PortfolioTracker
 
 logger = logging.getLogger(__name__)

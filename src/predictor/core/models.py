@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-
 
 # ---------------------------------------------------------------------------
 # Kalshi API Response Models
@@ -257,7 +256,7 @@ class Signal(BaseModel):
     target_price: int | None = None  # cents
     size: int | None = None  # suggested contract count
     metadata: dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=__import__("datetime").timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 class RiskCheckResult(BaseModel):

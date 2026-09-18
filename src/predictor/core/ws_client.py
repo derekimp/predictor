@@ -12,12 +12,12 @@ from websockets.asyncio.client import ClientConnection
 
 from predictor.core.auth import KalshiAuth
 from predictor.core.event_bus import (
-    EventBus,
     WS_FILL,
     WS_ORDERBOOK_DELTA,
     WS_ORDERBOOK_SNAPSHOT,
     WS_TICKER,
     WS_TRADE,
+    EventBus,
 )
 from predictor.core.exceptions import WebSocketError
 from predictor.core.models import (

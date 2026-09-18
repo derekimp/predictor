@@ -8,14 +8,13 @@ from typing import TYPE_CHECKING
 
 from predictor.core.event_bus import (
     SIGNAL_GENERATED,
-    WS_ORDERBOOK_SNAPSHOT,
     WS_ORDERBOOK_DELTA,
+    WS_ORDERBOOK_SNAPSHOT,
     WS_TICKER,
     WS_TRADE,
     EventBus,
 )
 from predictor.core.models import (
-    Market,
     OrderbookDelta,
     OrderbookSnapshot,
     Signal,

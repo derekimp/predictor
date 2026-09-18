@@ -221,7 +221,8 @@ class Storage:
         conn = await self._ensure_conn()
         await conn.execute(
             """INSERT INTO signals
-               (strategy_name, ticker, direction, confidence, target_price, size, metadata, timestamp)
+               (strategy_name, ticker, direction, confidence, target_price,
+                size, metadata, timestamp)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 signal.strategy_name,

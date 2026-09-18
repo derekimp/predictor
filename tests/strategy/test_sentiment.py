@@ -61,7 +61,11 @@ class TestSentimentStrategy:
         storage = MagicMock()
 
         strategy = SentimentStrategy(
-            config={"min_divergence_cents": 10, "sentiment_window_articles": 20, "decay_factor": 0.95},
+            config={
+                "min_divergence_cents": 10,
+                "sentiment_window_articles": 20,
+                "decay_factor": 0.95,
+            },
             event_bus=event_bus,
             market_data=market_data,
             storage=storage,
@@ -99,7 +103,11 @@ class TestSentimentStrategy:
         storage = MagicMock()
 
         strategy = SentimentStrategy(
-            config={"min_divergence_cents": 10, "sentiment_window_articles": 20, "decay_factor": 0.95},
+            config={
+                "min_divergence_cents": 10,
+                "sentiment_window_articles": 20,
+                "decay_factor": 0.95,
+            },
             event_bus=event_bus,
             market_data=market_data,
             storage=storage,
@@ -136,7 +144,11 @@ class TestSentimentStrategy:
         storage = MagicMock()
 
         strategy = SentimentStrategy(
-            config={"min_divergence_cents": 10, "sentiment_window_articles": 20, "decay_factor": 0.95},
+            config={
+                "min_divergence_cents": 10,
+                "sentiment_window_articles": 20,
+                "decay_factor": 0.95,
+            },
             event_bus=event_bus,
             market_data=market_data,
             storage=storage,

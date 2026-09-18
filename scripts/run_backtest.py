@@ -15,24 +15,15 @@ import asyncio
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from predictor.backtest.engine import BacktestEngine
+from predictor.backtest.market_data import BacktestMarketData
 from predictor.core.config import load_settings
 from predictor.core.event_bus import EventBus
 from predictor.data.storage import Storage
 from predictor.strategy.stat_arb import StatArbStrategy
-
-
-def _make_mock_market_data():
-    """Create a minimal mock for market data service (backtest doesn't use live data)."""
-    mock = MagicMock()
-    mock.get_market.return_value = None
-    mock.get_orderbook.return_value = None
-    mock.get_active_markets.return_value = []
-    return mock
 
 
 async def main() -> None:
@@ -57,9 +48,10 @@ async def main() -> None:
         end = datetime.now(UTC)
         start = end - timedelta(days=args.days)
 
-    # Create strategy
+    # Create strategy. BacktestEngine rebinds this to its own replay-backed
+    # provider, which is what actually feeds the strategy during the run.
     event_bus = EventBus()
-    market_data = _make_mock_market_data()
+    market_data = BacktestMarketData()
 
     if args.strategy == "stat_arb":
         strategy = StatArbStrategy(

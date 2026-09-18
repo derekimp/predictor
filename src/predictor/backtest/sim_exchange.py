@@ -167,6 +167,21 @@ class SimulatedExchange:
         return len(self._resting_orders)
 
     @property
+    def committed_cost(self) -> int:
+        """Cash tied up in resting buy orders, in cents.
+
+        A resting buy is an unconditional commitment to pay if it fills, so
+        the backtester must treat it as spent when sizing new orders.
+        """
+        total = 0
+        for order in self._resting_orders.values():
+            if order.action != "buy":
+                continue
+            price = order.yes_price if order.side == "yes" else order.no_price
+            total += price * order.count
+        return total
+
+    @property
     def total_fills(self) -> int:
         return len(self._fills)
 

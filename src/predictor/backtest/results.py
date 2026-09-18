@@ -149,7 +149,7 @@ class BacktestResult:
             f"Initial balance: ${self.initial_balance_cents / 100:.2f}",
             f"Final balance:   ${self.final_balance / 100:.2f}",
             f"Total PnL:       ${self.total_pnl_cents / 100:+.2f} ({self.total_return_pct:+.1f}%)",
-            f"",
+            "",
             f"Trades placed:   {self.num_trades}",
             f"Markets settled: {self.num_settlements}",
             f"Win rate:        {self.win_rate:.1f}%",

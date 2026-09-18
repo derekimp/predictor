@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
 
-from predictor.core.event_bus import EventBus, WS_FILL
-from predictor.core.models import Balance, Fill, FillMessage, Position
+from predictor.core.event_bus import EventBus
+from predictor.core.models import FillMessage
 from predictor.core.rest_client import KalshiRestClient
 from predictor.data.storage import Storage
 

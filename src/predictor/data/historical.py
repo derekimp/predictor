@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from predictor.core.rest_client import KalshiRestClient
 from predictor.data.storage import Storage

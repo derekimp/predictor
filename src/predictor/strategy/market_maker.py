@@ -23,7 +23,7 @@ from predictor.strategy.base import BaseStrategy
 from predictor.strategy.signal import make_signal
 
 if TYPE_CHECKING:
-    from predictor.data.market_data import MarketDataService
+    from predictor.data.market_data import MarketDataProvider
     from predictor.data.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class MarketMakingStrategy(BaseStrategy):
         self,
         config: dict,
         event_bus: EventBus,
-        market_data: MarketDataService,
+        market_data: MarketDataProvider,
         storage: Storage,
     ) -> None:
         super().__init__("market_maker", config, event_bus, market_data, storage)

@@ -96,6 +96,9 @@ def check_balance(
     if portfolio.balance_cents < config.min_balance_cents:
         return RiskCheckResult(
             approved=False,
-            reason=f"Balance too low: ${portfolio.balance_cents/100:.2f} < ${config.min_balance_cents/100:.2f}",
+            reason=(
+                f"Balance too low: ${portfolio.balance_cents / 100:.2f} "
+                f"< ${config.min_balance_cents / 100:.2f}"
+            ),
         )
     return RiskCheckResult(approved=True)

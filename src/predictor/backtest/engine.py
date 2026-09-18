@@ -7,9 +7,10 @@ order matching, and computes performance metrics.
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING
 
+from predictor.backtest.market_data import BacktestMarketData
 from predictor.backtest.results import BacktestResult
 from predictor.backtest.sim_exchange import SimulatedExchange
 from predictor.core.config import RiskLimitsConfig
@@ -18,7 +19,7 @@ from predictor.data.storage import Storage
 from predictor.strategy.base import BaseStrategy
 
 if TYPE_CHECKING:
-    import pandas as pd
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,11 @@ class BacktestEngine:
         self._initial_balance = initial_balance_cents
         self._risk_config = risk_config or RiskLimitsConfig()
         self._sim_exchange = SimulatedExchange(slippage_cents=slippage_cents)
+
+        # Strategies read prices through a MarketDataProvider. There is no live
+        # feed during a backtest, so point the strategy at the replay instead.
+        self._market_data = BacktestMarketData()
+        strategy.bind_market_data(self._market_data)
 
     async def run(
         self,
@@ -102,6 +108,8 @@ class BacktestEngine:
             len(all_events), len(tickers), start, end,
         )
 
+        await self._strategy.start()
+
         # Replay events
         for timestamp, ticker, data in all_events:
             yes_bid = data["yes_bid"]
@@ -112,12 +120,14 @@ class BacktestEngine:
                 ticker, yes_bid, yes_ask, timestamp,
             )
             for fill in fills:
+                unit_price = (
+                    fill.yes_price if fill.side == "yes" else 100 - fill.yes_price
+                )
+                cash = unit_price * fill.count
                 if fill.action == "buy":
-                    cost = fill.yes_price * fill.count if fill.side == "yes" else (100 - fill.yes_price) * fill.count
-                    balance -= cost
+                    balance -= cash
                 else:
-                    revenue = fill.yes_price * fill.count if fill.side == "yes" else (100 - fill.yes_price) * fill.count
-                    balance += revenue
+                    balance += cash
 
                 result.add_trade(
                     timestamp, ticker, fill.action, fill.side,
@@ -135,21 +145,26 @@ class BacktestEngine:
                 status="open",
             )
 
-            # 3. Feed to strategy
+            # 3. Publish to the provider so the strategy sees current prices
+            if self._market_data.apply(market):
+                # First sighting of this ticker: let strategies that cache a
+                # view of the universe (e.g. stat_arb's event map) rebuild.
+                await self._strategy.on_markets_changed()
+
+            # 4. Feed to strategy
             try:
                 signal = await self._strategy.on_market_update(ticker, market)
             except Exception:
                 logger.exception("Strategy error on %s", ticker)
                 continue
 
-            # 4. Process signal
+            # 5. Process signal
             if signal and signal.direction != "hold":
-                order = self._process_signal(signal, balance)
-                if order:
-                    result.add_equity_point(timestamp, balance)
+                self._process_signal(signal, balance)
 
-            # Track equity periodically
             result.add_equity_point(timestamp, balance)
+
+        await self._strategy.stop()
 
         # Final equity point
         result.add_equity_point(end, balance)
@@ -168,13 +183,23 @@ class BacktestEngine:
         size = signal.size or 1
         price = signal.target_price or 50
 
+        if price <= 0:
+            return False
+
         # Basic risk checks
         if size > self._risk_config.max_order_size:
             size = self._risk_config.max_order_size
 
+        # Orders already resting are unfilled but committed, so they are not
+        # spendable. Sizing against raw balance lets the book commit more cash
+        # than the account holds and drives the reported balance negative.
+        available = balance - self._sim_exchange.committed_cost
+        if available <= 0:
+            return False
+
         cost = size * price
-        if cost > balance * 0.25:  # don't risk more than 25% on one trade
-            size = max(1, int(balance * 0.25 / price))
+        if cost > available * 0.25:  # don't risk more than 25% on one trade
+            size = int(available * 0.25 / price)
 
         if size <= 0:
             return False

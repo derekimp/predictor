@@ -21,7 +21,7 @@ from predictor.strategy.base import BaseStrategy
 from predictor.strategy.signal import make_signal
 
 if TYPE_CHECKING:
-    from predictor.data.market_data import MarketDataService
+    from predictor.data.market_data import MarketDataProvider
     from predictor.data.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class StatArbStrategy(BaseStrategy):
         self,
         config: dict,
         event_bus: EventBus,
-        market_data: MarketDataService,
+        market_data: MarketDataProvider,
         storage: Storage,
     ) -> None:
         super().__init__("stat_arb", config, event_bus, market_data, storage)
@@ -55,6 +55,10 @@ class StatArbStrategy(BaseStrategy):
     async def start(self) -> None:
         """Build the event->markets mapping from available market data."""
         await super().start()
+        await self._build_event_map()
+
+    async def on_markets_changed(self) -> None:
+        """Rebuild the event map when new markets become available."""
         await self._build_event_map()
 
     async def _build_event_map(self) -> None:

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding, rsa, utils
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
 from predictor.core.auth import KalshiAuth

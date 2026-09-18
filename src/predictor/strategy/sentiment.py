@@ -27,7 +27,7 @@ from predictor.strategy.base import BaseStrategy
 from predictor.strategy.signal import make_signal
 
 if TYPE_CHECKING:
-    from predictor.data.market_data import MarketDataService
+    from predictor.data.market_data import MarketDataProvider
     from predictor.data.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,14 @@ def _sentiment_to_probability(compound: float) -> float:
     return max(5.0, min(95.0, prob))
 
 
+
+def _series_of(event_ticker: str) -> str:
+    """Strip the trailing segment of an event ticker to get its series."""
+    if "-" in event_ticker:
+        return event_ticker.rsplit("-", 1)[0]
+    return event_ticker
+
+
 class SentimentStrategy(BaseStrategy):
     """Trade based on news sentiment divergence from market price.
 
@@ -56,7 +64,7 @@ class SentimentStrategy(BaseStrategy):
         self,
         config: dict,
         event_bus: EventBus,
-        market_data: MarketDataService,
+        market_data: MarketDataProvider,
         storage: Storage,
     ) -> None:
         super().__init__("sentiment", config, event_bus, market_data, storage)
@@ -78,7 +86,7 @@ class SentimentStrategy(BaseStrategy):
 
         # Build series -> markets mapping
         for market in self._market_data.get_active_markets():
-            series = market.event_ticker.rsplit("-", 1)[0] if "-" in market.event_ticker else market.event_ticker
+            series = _series_of(market.event_ticker)
             self._series_to_markets[series].append(market.ticker)
 
         # Subscribe to news events
@@ -136,7 +144,7 @@ class SentimentStrategy(BaseStrategy):
     def _evaluate_divergence(self, ticker: str, market: Market) -> Signal | None:
         """Check if sentiment diverges from market price for this ticker."""
         # Find the series for this market
-        series = market.event_ticker.rsplit("-", 1)[0] if "-" in market.event_ticker else market.event_ticker
+        series = _series_of(market.event_ticker)
 
         window = self._sentiment_window.get(series)
         if not window or len(window) < 2:

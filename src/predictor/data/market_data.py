@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Protocol, runtime_checkable
 
 from predictor.core.event_bus import (
-    EventBus,
     WS_ORDERBOOK_DELTA,
     WS_ORDERBOOK_SNAPSHOT,
     WS_TICKER,
     WS_TRADE,
+    EventBus,
 )
 from predictor.core.models import (
     Market,
@@ -27,6 +28,28 @@ from predictor.data.storage import Storage
 logger = logging.getLogger(__name__)
 
 _MARKET_REFRESH_INTERVAL = 60  # seconds
+
+
+@runtime_checkable
+class MarketDataProvider(Protocol):
+    """The read API strategies use to look up market state.
+
+    MarketDataService is the live implementation; backtests supply a
+    replay-backed one. Strategies only ever depend on this protocol, so the
+    same strategy code runs unchanged against live data and historical data.
+    """
+
+    def get_market(self, ticker: str) -> Market | None:
+        """Return the latest known state for a ticker, or None if unknown."""
+        ...
+
+    def get_orderbook(self, ticker: str) -> LocalOrderbook | None:
+        """Return the local orderbook for a ticker, or None if unavailable."""
+        ...
+
+    def get_active_markets(self) -> list[Market]:
+        """Return every market currently open for trading."""
+        ...
 
 
 class MarketDataService:

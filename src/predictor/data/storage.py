@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS market_snapshots (
     last_price INTEGER,
     volume INTEGER,
     open_interest INTEGER,
-    status TEXT
+    status TEXT,
+    result TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_market_snap_ticker_ts
     ON market_snapshots(ticker, timestamp);
@@ -130,10 +131,22 @@ class Storage:
         try:
             self._conn = await aiosqlite.connect(self._db_path)
             await self._conn.executescript(_SCHEMA)
+            await self._migrate()
             await self._conn.commit()
             logger.info("Storage initialized at %s", self._db_path)
         except Exception as e:
             raise StorageError(f"Failed to initialize database: {e}") from e
+
+    async def _migrate(self) -> None:
+        """Add columns that CREATE TABLE IF NOT EXISTS won't add to an existing table."""
+        conn = self._conn
+        if conn is None:  # pragma: no cover - guarded by initialize()
+            return
+        cursor = await conn.execute("PRAGMA table_info(market_snapshots)")
+        columns = {row[1] for row in await cursor.fetchall()}
+        if "result" not in columns:
+            await conn.execute("ALTER TABLE market_snapshots ADD COLUMN result TEXT")
+            logger.info("Migrated market_snapshots: added result column")
 
     async def _ensure_conn(self) -> aiosqlite.Connection:
         if self._conn is None:
@@ -142,16 +155,23 @@ class Storage:
 
     # --- Market Data ---
 
-    async def save_market_snapshot(self, market: Market) -> None:
+    async def save_market_snapshot(
+        self, market: Market, timestamp: datetime | None = None
+    ) -> None:
+        """Record a market's state.
+
+        Pass ``timestamp`` when backfilling history; it defaults to now, which
+        is only correct for a snapshot taken from the live feed.
+        """
         conn = await self._ensure_conn()
         await conn.execute(
             """INSERT INTO market_snapshots
                (ticker, timestamp, yes_bid, yes_ask, no_bid, no_ask,
-                last_price, volume, open_interest, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                last_price, volume, open_interest, status, result)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 market.ticker,
-                datetime.now(UTC).isoformat(),
+                (timestamp or datetime.now(UTC)).isoformat(),
                 market.yes_bid,
                 market.yes_ask,
                 market.no_bid,
@@ -160,6 +180,7 @@ class Storage:
                 market.volume,
                 market.open_interest,
                 market.status,
+                market.result,
             ),
         )
         await conn.commit()
@@ -203,7 +224,8 @@ class Storage:
     ) -> pd.DataFrame:
         conn = await self._ensure_conn()
         cursor = await conn.execute(
-            """SELECT timestamp, yes_bid, yes_ask, last_price, volume, open_interest
+            """SELECT timestamp, yes_bid, yes_ask, last_price, volume,
+                      open_interest, status, result
                FROM market_snapshots
                WHERE ticker = ? AND timestamp >= ? AND timestamp <= ?
                ORDER BY timestamp""",
@@ -212,7 +234,10 @@ class Storage:
         rows = await cursor.fetchall()
         return pd.DataFrame(
             rows,
-            columns=["timestamp", "yes_bid", "yes_ask", "last_price", "volume", "open_interest"],
+            columns=[
+                "timestamp", "yes_bid", "yes_ask", "last_price",
+                "volume", "open_interest", "status", "result",
+            ],
         )
 
     # --- Signals & Orders ---
@@ -221,7 +246,8 @@ class Storage:
         conn = await self._ensure_conn()
         await conn.execute(
             """INSERT INTO signals
-               (strategy_name, ticker, direction, confidence, target_price, size, metadata, timestamp)
+               (strategy_name, ticker, direction, confidence, target_price,
+                size, metadata, timestamp)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 signal.strategy_name,

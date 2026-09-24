@@ -9,7 +9,7 @@ import asyncio
 import logging
 import signal
 import sys
-from pathlib import Path
+from contextlib import suppress
 
 from predictor.core.auth import KalshiAuth
 from predictor.core.config import load_settings
@@ -22,12 +22,12 @@ from predictor.data.storage import Storage
 from predictor.execution.executor import Executor
 from predictor.execution.order_manager import OrderManager
 from predictor.execution.reconciler import Reconciler
-from predictor.monitoring.logger import setup_logging
-from predictor.risk.manager import RiskManager
-from predictor.risk.portfolio import PortfolioTracker
 from predictor.monitoring.alerts import AlertManager
 from predictor.monitoring.health import HealthServer
+from predictor.monitoring.logger import setup_logging
 from predictor.monitoring.metrics import MetricsCollector
+from predictor.risk.manager import RiskManager
+from predictor.risk.portfolio import PortfolioTracker
 from predictor.strategy.market_maker import MarketMakingStrategy
 from predictor.strategy.registry import StrategyRegistry
 from predictor.strategy.sentiment import SentimentStrategy
@@ -151,6 +151,7 @@ async def run() -> None:
         loop.add_signal_handler(sig, _signal_handler)
 
     # 10. Start all services
+    ws_task: asyncio.Task[None] | None = None
     try:
         await market_data.start()
         await order_manager.start()
@@ -200,6 +201,11 @@ async def run() -> None:
             await order_manager.cancel_all()
         except Exception:
             logger.exception("Error cancelling orders during shutdown")
+
+        if ws_task is not None:
+            ws_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await ws_task
 
         await ws_client.close()
         await market_data.stop()

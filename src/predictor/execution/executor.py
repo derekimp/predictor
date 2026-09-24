@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from predictor.core.event_bus import EventBus, SIGNAL_GENERATED
+from predictor.core.event_bus import SIGNAL_GENERATED, EventBus
 from predictor.core.models import Signal
 from predictor.execution.order_manager import OrderManager
 

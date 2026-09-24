@@ -46,9 +46,27 @@ class TestStatArbStrategy:
     ) -> None:
         """Sum > 100: should signal buy_no on the most expensive leg."""
         markets = {
-            "EVT-A": Market(ticker="EVT-A", event_ticker="EVT", yes_bid=40, yes_ask=42, last_price=41),
-            "EVT-B": Market(ticker="EVT-B", event_ticker="EVT", yes_bid=35, yes_ask=37, last_price=36),
-            "EVT-C": Market(ticker="EVT-C", event_ticker="EVT", yes_bid=30, yes_ask=32, last_price=31),
+            "EVT-A": Market(
+                ticker="EVT-A",
+                event_ticker="EVT",
+                yes_bid=40,
+                yes_ask=42,
+                last_price=41,
+            ),
+            "EVT-B": Market(
+                ticker="EVT-B",
+                event_ticker="EVT",
+                yes_bid=35,
+                yes_ask=37,
+                last_price=36,
+            ),
+            "EVT-C": Market(
+                ticker="EVT-C",
+                event_ticker="EVT",
+                yes_bid=30,
+                yes_ask=32,
+                last_price=31,
+            ),
         }
         # Sum of mids: 41 + 36 + 31 = 108 (deviation = +8)
         market_data = MockMarketData(markets)
@@ -75,9 +93,27 @@ class TestStatArbStrategy:
     ) -> None:
         """Sum < 100: should signal buy_yes on the cheapest leg."""
         markets = {
-            "EVT-A": Market(ticker="EVT-A", event_ticker="EVT", yes_bid=30, yes_ask=32, last_price=31),
-            "EVT-B": Market(ticker="EVT-B", event_ticker="EVT", yes_bid=25, yes_ask=27, last_price=26),
-            "EVT-C": Market(ticker="EVT-C", event_ticker="EVT", yes_bid=28, yes_ask=30, last_price=29),
+            "EVT-A": Market(
+                ticker="EVT-A",
+                event_ticker="EVT",
+                yes_bid=30,
+                yes_ask=32,
+                last_price=31,
+            ),
+            "EVT-B": Market(
+                ticker="EVT-B",
+                event_ticker="EVT",
+                yes_bid=25,
+                yes_ask=27,
+                last_price=26,
+            ),
+            "EVT-C": Market(
+                ticker="EVT-C",
+                event_ticker="EVT",
+                yes_bid=28,
+                yes_ask=30,
+                last_price=29,
+            ),
         }
         # Sum of mids: 31 + 26 + 29 = 86 (deviation = -14)
         market_data = MockMarketData(markets)
@@ -103,8 +139,20 @@ class TestStatArbStrategy:
     ) -> None:
         """Sum close to 100: should not generate a signal."""
         markets = {
-            "EVT-A": Market(ticker="EVT-A", event_ticker="EVT", yes_bid=49, yes_ask=51, last_price=50),
-            "EVT-B": Market(ticker="EVT-B", event_ticker="EVT", yes_bid=48, yes_ask=52, last_price=50),
+            "EVT-A": Market(
+                ticker="EVT-A",
+                event_ticker="EVT",
+                yes_bid=49,
+                yes_ask=51,
+                last_price=50,
+            ),
+            "EVT-B": Market(
+                ticker="EVT-B",
+                event_ticker="EVT",
+                yes_bid=48,
+                yes_ask=52,
+                last_price=50,
+            ),
         }
         # Sum = 100.0 -> deviation = 0
         market_data = MockMarketData(markets)

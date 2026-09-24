@@ -1,4 +1,4 @@
-"""Tests for the backtesting framework."""
+"""Tests for the simulated exchange and backtest result reporting."""
 
 from __future__ import annotations
 

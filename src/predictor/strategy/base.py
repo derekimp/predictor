@@ -11,7 +11,7 @@ from predictor.core.models import Market, Signal, TradeMessage
 from predictor.data.orderbook import LocalOrderbook
 
 if TYPE_CHECKING:
-    from predictor.data.market_data import MarketDataService
+    from predictor.data.market_data import MarketDataProvider
     from predictor.data.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class BaseStrategy(ABC):
         name: str,
         config: dict,
         event_bus: EventBus,
-        market_data: MarketDataService,
+        market_data: MarketDataProvider,
         storage: Storage,
     ) -> None:
         self.name = name
@@ -54,6 +54,21 @@ class BaseStrategy(ABC):
     @abstractmethod
     def get_target_markets(self) -> list[str]:
         """Return list of market tickers this strategy wants to track."""
+
+    def bind_market_data(self, market_data: MarketDataProvider) -> None:
+        """Point the strategy at a different market data source.
+
+        The backtest engine uses this to swap the live service for a
+        replay-backed provider before the strategy starts.
+        """
+        self._market_data = market_data
+
+    async def on_markets_changed(self) -> None:  # noqa: B027 - optional hook
+        """Called when the set of available markets changes.
+
+        Strategies that cache a view of the market universe override this to
+        rebuild it. The default does nothing.
+        """
 
     async def start(self) -> None:
         """Activate the strategy."""

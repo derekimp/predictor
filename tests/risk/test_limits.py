@@ -12,7 +12,7 @@ from predictor.risk.limits import (
     check_order_size,
     check_position_limit,
 )
-from predictor.risk.portfolio import PortfolioTracker, PositionState
+from predictor.risk.portfolio import PositionState
 
 
 class MockPortfolio:

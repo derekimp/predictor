@@ -54,6 +54,19 @@ class SimulatedExchange:
         """Cancel a resting order. Returns True if it existed."""
         return self._resting_orders.pop(order_id, None) is not None
 
+    def cancel_orders_for_ticker(self, ticker: str) -> int:
+        """Cancel every resting order on one market. Returns the count cancelled.
+
+        Used when a market settles: orders resting on it can never fill, and
+        leaving them would keep their cash committed for the rest of the run.
+        """
+        order_ids = [
+            oid for oid, order in self._resting_orders.items() if order.ticker == ticker
+        ]
+        for oid in order_ids:
+            del self._resting_orders[oid]
+        return len(order_ids)
+
     def cancel_all(self) -> int:
         """Cancel all resting orders. Returns count cancelled."""
         count = len(self._resting_orders)
@@ -101,6 +114,14 @@ class SimulatedExchange:
                         filled = True
 
             if filled:
+                # FillMessage carries only yes_price, so a NO fill has to be
+                # expressed in YES terms: a NO contract at q cents is the same
+                # economics as a YES at 100 - q. Reporting order.yes_price here
+                # would send 0 for every NO order, and every downstream reader
+                # would price the contract at a full 100c.
+                fill_yes_price = (
+                    order.yes_price if order.side == "yes" else 100 - order.no_price
+                )
                 fill = FillMessage(
                     trade_id=f"sim-fill-{uuid.uuid4().hex[:8]}",
                     order_id=order_id,
@@ -108,7 +129,7 @@ class SimulatedExchange:
                     side=order.side,
                     action=order.action,
                     count=order.count,
-                    yes_price=order.yes_price,
+                    yes_price=fill_yes_price,
                     created_time=timestamp,
                 )
                 fills.append(fill)
@@ -165,6 +186,21 @@ class SimulatedExchange:
     @property
     def resting_order_count(self) -> int:
         return len(self._resting_orders)
+
+    @property
+    def committed_cost(self) -> int:
+        """Cash tied up in resting buy orders, in cents.
+
+        A resting buy is an unconditional commitment to pay if it fills, so
+        the backtester must treat it as spent when sizing new orders.
+        """
+        total = 0
+        for order in self._resting_orders.values():
+            if order.action != "buy":
+                continue
+            price = order.yes_price if order.side == "yes" else order.no_price
+            total += price * order.count
+        return total
 
     @property
     def total_fills(self) -> int:

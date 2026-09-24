@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from predictor.core.rest_client import KalshiRestClient
 from predictor.data.storage import Storage
@@ -21,25 +21,33 @@ class HistoricalDataDownloader:
     async def download_market_snapshots(
         self,
         tickers: list[str] | None = None,
-        status: str = "open",
+        statuses: list[str] | None = None,
     ) -> int:
         """Download current market state for all (or specified) markets.
 
+        Defaults to open and settled markets. Settled ones matter: they carry
+        the outcome a backtest needs to resolve positions, and fetching only
+        open markets leaves every snapshot's result NULL.
+
         Returns the number of markets saved.
         """
-        count = 0
-        cursor = None
-        while True:
-            resp = await self._rest.get_markets(status=status, cursor=cursor, limit=100)
-            for market in resp.markets:
-                if tickers is None or market.ticker in tickers:
-                    await self._storage.save_market_snapshot(market)
-                    count += 1
-            if not resp.cursor:
-                break
-            cursor = resp.cursor
+        if statuses is None:
+            statuses = ["open", "settled"]
 
-        logger.info("Downloaded %d market snapshots", count)
+        count = 0
+        for status in statuses:
+            cursor = None
+            while True:
+                resp = await self._rest.get_markets(status=status, cursor=cursor, limit=100)
+                for market in resp.markets:
+                    if tickers is None or market.ticker in tickers:
+                        await self._storage.save_market_snapshot(market)
+                        count += 1
+                if not resp.cursor:
+                    break
+                cursor = resp.cursor
+
+        logger.info("Downloaded %d market snapshots (%s)", count, ", ".join(statuses))
         return count
 
     async def download_candlesticks(

@@ -6,15 +6,14 @@ import asyncio
 import logging
 import time
 from collections import defaultdict
-from datetime import UTC, datetime
 
 from predictor.core.event_bus import (
-    EventBus,
     ORDER_CANCELLED,
     ORDER_CREATED,
     ORDER_FILLED,
     RISK_BREACH,
     SIGNAL_GENERATED,
+    EventBus,
 )
 from predictor.risk.portfolio import PortfolioTracker
 

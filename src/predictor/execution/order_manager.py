@@ -4,17 +4,13 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import TYPE_CHECKING
 
-from predictor.core.event_bus import EventBus, ORDER_CANCELLED, ORDER_CREATED, ORDER_FILLED, WS_FILL
+from predictor.core.event_bus import ORDER_CANCELLED, ORDER_CREATED, ORDER_FILLED, WS_FILL, EventBus
 from predictor.core.models import CreateOrderRequest, FillMessage, Order, Signal
 from predictor.core.rest_client import KalshiRestClient
 from predictor.data.storage import Storage
 from predictor.risk.manager import RiskManager
 from predictor.risk.portfolio import PortfolioTracker
-
-if TYPE_CHECKING:
-    import asyncio
 
 logger = logging.getLogger(__name__)
 

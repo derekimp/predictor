@@ -51,6 +51,9 @@ class BacktestEngine:
         self._market_data = BacktestMarketData()
         strategy.bind_market_data(self._market_data)
 
+        # Markets already paid out, so a later snapshot cannot settle them twice.
+        self._settled: set[str] = set()
+
     async def run(
         self,
         start: datetime,
@@ -94,6 +97,8 @@ class BacktestEngine:
                     "yes_ask": int(row["yes_ask"]) if row["yes_ask"] else 0,
                     "last_price": int(row["last_price"]) if row["last_price"] else 0,
                     "volume": int(row["volume"]) if row["volume"] else 0,
+                    "status": str(row["status"]) if row["status"] else "open",
+                    "result": str(row["result"]) if row["result"] else None,
                 }))
 
         # Sort all events chronologically
@@ -112,6 +117,9 @@ class BacktestEngine:
 
         # Replay events
         for timestamp, ticker, data in all_events:
+            if ticker in self._settled:
+                continue  # paid out already; later snapshots cannot change it
+
             yes_bid = data["yes_bid"]
             yes_ask = data["yes_ask"]
 
@@ -142,23 +150,31 @@ class BacktestEngine:
                 yes_ask=yes_ask,
                 last_price=data["last_price"],
                 volume=data["volume"],
-                status="open",
+                status=data["status"],
+                result=data["result"],
             )
 
             # 3. Publish to the provider so the strategy sees current prices
             if self._market_data.apply(market):
-                # First sighting of this ticker: let strategies that cache a
-                # view of the universe (e.g. stat_arb's event map) rebuild.
+                # The tradeable universe changed — a new ticker, or one that
+                # just settled. Let strategies that cache a view of it (e.g.
+                # stat_arb's event map) rebuild.
                 await self._strategy.on_markets_changed()
 
-            # 4. Feed to strategy
+            # 4. Settle the market if this snapshot carries its outcome
+            if data["result"] in ("yes", "no"):
+                balance += self._settle(ticker, data["result"], timestamp, result)
+                result.add_equity_point(timestamp, balance)
+                continue
+
+            # 5. Feed to strategy
             try:
                 signal = await self._strategy.on_market_update(ticker, market)
             except Exception:
                 logger.exception("Strategy error on %s", ticker)
                 continue
 
-            # 5. Process signal
+            # 6. Process signal
             if signal and signal.direction != "hold":
                 self._process_signal(signal, balance)
 
@@ -175,6 +191,45 @@ class BacktestEngine:
         )
 
         return result
+
+    def _settle(
+        self,
+        ticker: str,
+        outcome: str,
+        timestamp: datetime,
+        result: BacktestResult,
+    ) -> int:
+        """Pay out every fill on a market that has settled.
+
+        Returns the change in cash, in cents. Fills already moved cash when
+        they happened — a buy paid its premium, a sell collected one — so
+        settlement moves only the payout: 100c per contract to whichever side
+        won, nothing to the other. The PnL recorded against the market is the
+        full round trip, premium included.
+        """
+        self._settled.add(ticker)
+
+        # Orders resting on a settled market can never fill, and leaving them
+        # would keep their cash committed for the rest of the run.
+        cancelled = self._sim_exchange.cancel_orders_for_ticker(ticker)
+
+        fills = self._sim_exchange.settle_market(ticker, outcome, timestamp)
+        if not fills:
+            return 0  # never held this market
+
+        cash = 0
+        pnl_total = 0
+        for fill, pnl in fills:
+            payout = 100 * fill.count if fill.side == outcome else 0
+            cash += payout if fill.action == "buy" else -payout
+            pnl_total += pnl
+
+        result.add_settlement(ticker, outcome, pnl_total)
+        logger.info(
+            "Settled %s as %s: %d fills, PnL $%.2f (%d resting orders cancelled)",
+            ticker, outcome, len(fills), pnl_total / 100, cancelled,
+        )
+        return cash
 
     def _process_signal(self, signal: Signal, balance: int) -> bool:
         """Validate signal against risk limits and submit to sim exchange."""

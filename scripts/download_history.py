@@ -50,7 +50,7 @@ async def main() -> None:
         downloader = HistoricalDataDownloader(client, storage)
 
         if args.snapshots:
-            print("Downloading market snapshots...")
+            print("Downloading market snapshots (open + settled)...")
             count = await downloader.download_market_snapshots()
             print(f"  Saved {count} market snapshots")
 

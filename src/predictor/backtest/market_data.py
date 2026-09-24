@@ -29,12 +29,14 @@ class BacktestMarketData:
     def apply(self, market: Market) -> bool:
         """Record the latest observed state for a market.
 
-        Returns True when this is the first time the ticker has been seen,
-        which the engine uses to tell strategies their universe has grown.
+        Returns True when the tradeable universe changed — a ticker seen for
+        the first time, or one whose status moved (open to settled, say). The
+        engine uses this to tell strategies to rebuild any cached view, so a
+        settled market stops being quoted against.
         """
-        is_new = market.ticker not in self._markets
+        previous = self._markets.get(market.ticker)
         self._markets[market.ticker] = market
-        return is_new
+        return previous is None or previous.status != market.status
 
     def get_market(self, ticker: str) -> Market | None:
         return self._markets.get(ticker)
